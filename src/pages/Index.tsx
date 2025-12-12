@@ -24,9 +24,15 @@ const Index = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex items-center justify-center mb-8"
+          className="flex items-center justify-between mb-12 py-4 px-6 rounded-2xl glass-effect"
         >
-          <img src={korevynLogo} alt="Korevyn Logo" className="h-20 w-auto" />
+          <div className="flex items-center gap-3">
+            <img src={korevynLogo} alt="Korevyn Logo" className="h-12 w-auto" />
+            <span className="text-xl font-bold gradient-text hidden sm:block">Korevyn</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden md:block">AI Landing Page Generator</span>
+          </div>
         </motion.header>
 
         {/* Hero Header */}
