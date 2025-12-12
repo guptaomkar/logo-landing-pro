@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Wand2 } from "lucide-react";
 import GeneratorForm from "@/components/GeneratorForm";
 import PreviewSection from "@/components/PreviewSection";
+import korevynLogo from "@/assets/korevyn-logo.png";
 
 const Index = () => {
   const [generatedPage, setGeneratedPage] = useState<any>(null);
@@ -18,11 +19,21 @@ const Index = () => {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-12">
+        {/* Header with Logo */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex items-center justify-center mb-8"
+        >
+          <img src={korevynLogo} alt="Korevyn Logo" className="h-20 w-auto" />
+        </motion.header>
+
         {/* Hero Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
           className="text-center mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-effect mb-6">
