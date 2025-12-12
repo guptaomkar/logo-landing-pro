@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Upload, Wand2 } from "lucide-react";
+import { Upload, Wand2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +17,7 @@ interface GeneratorFormProps {
 
 const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorFormProps) => {
   const [companyName, setCompanyName] = useState("");
+  const [companyDescription, setCompanyDescription] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
   const { toast } = useToast();
@@ -51,6 +53,15 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
       return;
     }
 
+    if (!companyDescription.trim()) {
+      toast({
+        title: "Company description required",
+        description: "Please describe your company to generate relevant content",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!logoFile) {
       toast({
         title: "Logo required",
@@ -72,6 +83,7 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
         const { data, error } = await supabase.functions.invoke("generate-landing-page", {
           body: {
             companyName,
+            companyDescription,
             logoBase64,
           },
         });
@@ -123,6 +135,24 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
               onChange={(e) => setCompanyName(e.target.value)}
               className="bg-background/50 border-border/50"
             />
+          </div>
+
+          {/* Company Description Input */}
+          <div className="space-y-2">
+            <Label htmlFor="company-description" className="text-base font-medium flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              Company Description
+            </Label>
+            <Textarea
+              id="company-description"
+              placeholder="Describe your company, products/services, target audience, and what makes you unique..."
+              value={companyDescription}
+              onChange={(e) => setCompanyDescription(e.target.value)}
+              className="bg-background/50 border-border/50 min-h-[120px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              The more details you provide, the better your landing page content will be tailored.
+            </p>
           </div>
 
           {/* Logo Upload */}
