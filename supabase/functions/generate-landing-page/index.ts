@@ -11,9 +11,9 @@ serve(async (req) => {
   }
 
   try {
-    const { companyName, logoBase64 } = await req.json();
+    const { companyName, companyDescription, logoBase64 } = await req.json();
     
-    if (!companyName || !logoBase64) {
+    if (!companyName || !companyDescription || !logoBase64) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -26,43 +26,51 @@ serve(async (req) => {
     }
 
     console.log('Generating landing page for:', companyName);
+    console.log('Company description:', companyDescription);
 
-    // Generate content with AI
-    const contentPrompt = `Generate professional landing page content for a company named "${companyName}". Return a JSON object with the following structure:
+    // Generate content with AI based on company description
+    const contentPrompt = `Generate professional landing page content for a company named "${companyName}".
+
+COMPANY DESCRIPTION:
+${companyDescription}
+
+Based on this description, create highly relevant and tailored content that accurately represents what this company does. The content should reflect the company's actual services, products, and value proposition.
+
+Return a JSON object with the following structure:
+{
+  "hero": {
+    "headline": "main headline (under 60 characters, compelling and specific to the company)",
+    "subheadline": "compelling subheadline (under 160 characters, highlighting key value proposition)",
+    "ctaText": "call to action button text"
+  },
+  "about": {
+    "title": "section title",
+    "description": "2-3 sentences about the company value proposition based on the description provided"
+  },
+  "features": [
     {
-      "hero": {
-        "headline": "main headline (under 60 characters)",
-        "subheadline": "compelling subheadline (under 160 characters)",
-        "ctaText": "call to action button text"
-      },
-      "about": {
-        "title": "section title",
-        "description": "2-3 sentences about the company value proposition"
-      },
-      "features": [
-        {
-          "title": "feature name",
-          "description": "feature description (1-2 sentences)",
-          "icon": "emoji that represents this feature"
-        }
-      ],
-      "services": [
-        {
-          "title": "service name",
-          "description": "service description (1-2 sentences)"
-        }
-      ],
-      "testimonials": [
-        {
-          "name": "person name",
-          "role": "job title",
-          "content": "testimonial quote",
-          "rating": 5
-        }
-      ]
+      "title": "feature name (relevant to the company)",
+      "description": "feature description (1-2 sentences)",
+      "icon": "emoji that represents this feature"
     }
+  ],
+  "services": [
+    {
+      "title": "service name (based on what the company actually offers)",
+      "description": "service description (1-2 sentences)"
+    }
+  ],
+  "testimonials": [
+    {
+      "name": "realistic person name",
+      "role": "job title relevant to the company's target audience",
+      "content": "testimonial quote that reflects the company's value",
+      "rating": 5
+    }
+  ]
+}
 
-    Generate 4-6 features, 3-4 services, and 3 testimonials. Make it professional, compelling, and tailored to the company name. Return ONLY valid JSON, no markdown formatting.`;
+Generate 4-6 features, 3-4 services, and 3 testimonials. Make everything highly relevant to the company description provided. Return ONLY valid JSON, no markdown formatting.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
