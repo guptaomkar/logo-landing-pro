@@ -28,8 +28,59 @@ serve(async (req) => {
     console.log('Generating landing page for:', companyName);
     console.log('Company description:', companyDescription);
 
-    // Generate content with AI based on company description
-    const contentPrompt = `Generate professional landing page content for a company named "${companyName}".
+    // First, generate a color palette based on the company description
+    const colorPrompt = `Based on this company description, suggest a professional color palette that matches their brand identity and industry.
+
+COMPANY: ${companyName}
+DESCRIPTION: ${companyDescription}
+
+Consider:
+- Industry conventions (e.g., blue for finance/trust, green for eco/health, orange for energy/creativity)
+- The mood and personality suggested by the description
+- Professional appeal and readability
+
+Return ONLY a JSON object with these exact hex color codes:
+{
+  "primary": "#hexcode",
+  "secondary": "#hexcode", 
+  "accent": "#hexcode",
+  "reasoning": "Brief explanation of why these colors fit"
+}
+
+Choose colors that work well together and create a cohesive, professional look. Return ONLY valid JSON, no markdown.`;
+
+    // Make parallel requests for colors and content
+    const [colorResponse, contentResponse] = await Promise.all([
+      fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: 'You are a professional brand designer. Return only valid JSON.' },
+            { role: 'user', content: colorPrompt }
+          ],
+        }),
+      }),
+      fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional landing page content creator. Always return valid JSON only, no markdown code blocks.'
+            },
+            {
+              role: 'user',
+              content: `Generate professional landing page content for a company named "${companyName}".
 
 COMPANY DESCRIPTION:
 ${companyDescription}
@@ -70,43 +121,49 @@ Return a JSON object with the following structure:
   ]
 }
 
-Generate 4-6 features, 3-4 services, and 3 testimonials. Make everything highly relevant to the company description provided. Return ONLY valid JSON, no markdown formatting.`;
+Generate 4-6 features, 3-4 services, and 3 testimonials. Make everything highly relevant to the company description provided. Return ONLY valid JSON, no markdown formatting.`
+            }
+          ],
+        }),
+      })
+    ]);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional landing page content creator. Always return valid JSON only, no markdown code blocks.'
-          },
-          {
-            role: 'user',
-            content: contentPrompt
-          }
-        ],
-        temperature: 0.8,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API Error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+    if (!colorResponse.ok || !contentResponse.ok) {
+      const errorText = !colorResponse.ok ? await colorResponse.text() : await contentResponse.text();
+      console.error('AI API Error:', errorText);
+      throw new Error('AI API error');
     }
 
-    const aiData = await response.json();
-    const contentText = aiData.choices[0].message.content;
+    const [colorData, contentData] = await Promise.all([
+      colorResponse.json(),
+      contentResponse.json()
+    ]);
+
+    // Parse color response
+    let extractedColors = {
+      primary: '#9b87f5',
+      secondary: '#0EA5E9',
+      accent: '#06b6d4',
+    };
     
-    // Parse the JSON response
+    try {
+      const colorText = colorData.choices[0].message.content;
+      const cleanedColorText = colorText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const colorResult = JSON.parse(cleanedColorText);
+      extractedColors = {
+        primary: colorResult.primary || extractedColors.primary,
+        secondary: colorResult.secondary || extractedColors.secondary,
+        accent: colorResult.accent || extractedColors.accent,
+      };
+      console.log('Generated colors:', extractedColors, 'Reasoning:', colorResult.reasoning);
+    } catch (colorError) {
+      console.error('Color parse error, using defaults:', colorError);
+    }
+
+    // Parse content response
+    const contentText = contentData.choices[0].message.content;
     let content;
     try {
-      // Remove markdown code blocks if present
       const cleanedContent = contentText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       content = JSON.parse(cleanedContent);
     } catch (parseError) {
@@ -115,13 +172,6 @@ Generate 4-6 features, 3-4 services, and 3 testimonials. Make everything highly 
     }
 
     console.log('Generated content:', JSON.stringify(content).substring(0, 200));
-
-    // Extract dominant colors from logo (simplified version)
-    const extractedColors = {
-      primary: '#9b87f5',
-      secondary: '#0EA5E9',
-      accent: '#06b6d4',
-    };
 
     // Generate HTML
     const html = generateHTML(companyName, content, logoBase64, extractedColors);
