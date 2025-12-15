@@ -29,92 +29,69 @@ serve(async (req) => {
     console.log('Company description:', companyDescription);
 
     // Combined prompt for structure, colors, and content
-    const mainPrompt = `Analyze this company and generate a complete landing page design with appropriate structure.
+    const mainPrompt = `You are an expert web designer. Create a UNIQUE landing page design tailored specifically to this company.
 
 COMPANY: ${companyName}
 DESCRIPTION: ${companyDescription}
 
-Based on the company type and industry, determine:
-1. The most suitable layout style
-2. Which sections are most relevant
-3. Appropriate color palette
-4. All content
+CRITICAL: Each company type requires a COMPLETELY DIFFERENT layout and structure:
 
-Return a JSON object with this structure:
+INDUSTRY-SPECIFIC RULES:
+- Restaurant/Cafe/Food: Use "ecommerce" style with "bold" hero, show menu items as services, NO pricing tiers, YES team (chef/staff), warm colors (browns, oranges, reds)
+- Tech/SaaS/Software: Use "modern-saas" style with "centered" hero, YES pricing tiers, YES stats, YES FAQ, cool colors (blues, purples)
+- Creative Agency/Design: Use "creative-agency" style with "minimal" hero, YES portfolio, NO pricing, vibrant/bold colors
+- Law/Finance/Consulting: Use "professional-services" style with "split" hero, YES stats, YES team, NO pricing, conservative colors (navy, gold)
+- Healthcare/Medical: Use "corporate" style with "centered" hero, YES team (doctors), YES FAQ, calming colors (greens, blues)
+- E-commerce/Retail: Use "ecommerce" style with "bold" hero, YES stats, consider pricing for products
+- Startup/Innovation: Use "startup" style with "bold" hero, YES stats, YES pricing, modern vibrant colors
+- Education/Training: Use "corporate" style with "split" hero, YES pricing (courses), YES FAQ, professional colors
+- Fitness/Wellness: Use "startup" style with "bold" hero, YES pricing (memberships), YES team, energetic colors
+
+Return JSON:
 {
   "layout": {
     "style": "modern-saas" | "corporate" | "creative-agency" | "ecommerce" | "startup" | "professional-services",
     "heroStyle": "centered" | "split" | "video-bg" | "minimal" | "bold",
     "navStyle": "transparent" | "solid" | "floating",
     "features": {
-      "hasStats": boolean,
-      "hasPricing": boolean,
-      "hasTeam": boolean,
-      "hasFAQ": boolean,
-      "hasPortfolio": boolean,
-      "hasCTA": boolean,
-      "hasNewsletter": boolean
+      "hasStats": boolean (true for B2B, consulting, agencies),
+      "hasPricing": boolean (true for SaaS, courses, memberships - false for restaurants, agencies),
+      "hasTeam": boolean (true for restaurants, medical, law firms),
+      "hasFAQ": boolean (true for complex services, SaaS),
+      "hasPortfolio": boolean (true for creative agencies, photographers),
+      "hasCTA": boolean (usually true),
+      "hasNewsletter": boolean (true for content-focused businesses)
     }
   },
   "colors": {
-    "primary": "#hexcode",
-    "secondary": "#hexcode",
-    "accent": "#hexcode",
-    "background": "#hexcode",
-    "text": "#hexcode"
+    "primary": "#hexcode (industry-appropriate main brand color)",
+    "secondary": "#hexcode (complementary color)",
+    "accent": "#hexcode (highlight/CTA color)",
+    "background": "#hexcode (page background)",
+    "text": "#hexcode (main text color)"
   },
   "content": {
     "hero": {
-      "headline": "compelling headline under 60 chars",
+      "headline": "compelling headline under 60 chars specific to ${companyName}",
       "subheadline": "value proposition under 160 chars",
-      "ctaText": "action button text",
-      "secondaryCta": "optional secondary CTA text or null"
+      "ctaText": "action button (industry-specific: 'View Menu', 'Get Started', 'Book Consultation', etc.)",
+      "secondaryCta": "secondary CTA or null"
     },
-    "stats": [
-      { "value": "100+", "label": "Clients Served" }
-    ],
-    "about": {
-      "title": "section title",
-      "description": "2-3 sentences"
-    },
-    "features": [
-      { "title": "Feature", "description": "1-2 sentences", "icon": "emoji" }
-    ],
-    "services": [
-      { "title": "Service", "description": "1-2 sentences", "price": "optional price or null" }
-    ],
-    "pricing": [
-      { "name": "Plan Name", "price": "$XX/mo", "features": ["feature1", "feature2"], "highlighted": boolean }
-    ],
-    "team": [
-      { "name": "Name", "role": "Title", "bio": "Short bio" }
-    ],
-    "testimonials": [
-      { "name": "Name", "role": "Title", "company": "Company", "content": "Quote", "rating": 5 }
-    ],
-    "faq": [
-      { "question": "Question?", "answer": "Answer" }
-    ],
-    "cta": {
-      "headline": "Final CTA headline",
-      "subheadline": "Supporting text",
-      "buttonText": "CTA button"
-    }
+    "stats": [{ "value": "100+", "label": "Relevant metric" }],
+    "about": { "title": "About section title", "description": "2-3 sentences about ${companyName}" },
+    "features": [{ "title": "Feature/Benefit", "description": "1-2 sentences", "icon": "relevant emoji" }],
+    "services": [{ "title": "Service/Product", "description": "1-2 sentences", "price": "price if relevant or null" }],
+    "pricing": [{ "name": "Plan", "price": "$XX/mo", "features": ["f1", "f2"], "highlighted": boolean }],
+    "team": [{ "name": "Name", "role": "Title", "bio": "Short bio" }],
+    "testimonials": [{ "name": "Customer", "role": "Title", "company": "Company", "content": "Review quote", "rating": 5 }],
+    "faq": [{ "question": "Industry-relevant question?", "answer": "Answer" }],
+    "cta": { "headline": "Final CTA", "subheadline": "Supporting text", "buttonText": "Action" }
   }
 }
 
-IMPORTANT GUIDELINES:
-- Choose layout.style based on company type (tech startup = modern-saas, law firm = professional-services, etc.)
-- Only set hasStats/hasPricing/hasTeam/hasFAQ/hasPortfolio to true if relevant to this company
-- Generate 3-6 features, 2-4 services, 3 testimonials
-- If hasPricing is true, generate 2-3 pricing tiers
-- If hasStats is true, generate 3-4 impressive but realistic stats
-- If hasTeam is true, generate 3-4 team members
-- If hasFAQ is true, generate 4-6 relevant FAQs
-- Colors should match the industry (finance=blue, health=green, creative=vibrant, etc.)
-- All content must be highly specific to this company's actual offerings
+MANDATORY: Vary the features.has* booleans based on the company type. A coffee shop should NOT have pricing tiers. A SaaS should NOT have a team section prominently. Match the structure to what makes sense for THIS specific business.
 
-Return ONLY valid JSON, no markdown.`;
+Return ONLY valid JSON.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

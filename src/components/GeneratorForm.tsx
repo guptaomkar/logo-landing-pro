@@ -75,29 +75,30 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
 
     try {
       // Convert logo to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const logoBase64 = reader.result as string;
+      const logoBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(logoFile);
+      });
 
-        // Call the edge function to generate the landing page
-        const { data, error } = await supabase.functions.invoke("generate-landing-page", {
-          body: {
-            companyName,
-            companyDescription,
-            logoBase64,
-          },
-        });
+      // Call the edge function to generate the landing page
+      const { data, error } = await supabase.functions.invoke("generate-landing-page", {
+        body: {
+          companyName,
+          companyDescription,
+          logoBase64,
+        },
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        onGenerate(data);
-        
-        toast({
-          title: "Success!",
-          description: "Your landing page has been generated",
-        });
-      };
-      reader.readAsDataURL(logoFile);
+      onGenerate(data);
+      
+      toast({
+        title: "Success!",
+        description: "Your landing page has been generated",
+      });
     } catch (error) {
       console.error("Generation error:", error);
       toast({

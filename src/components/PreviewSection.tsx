@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Code, Eye, Loader2 } from "lucide-react";
+import { Download, Code, Eye, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,6 +33,16 @@ const PreviewSection = ({ generatedPage, isGenerating }: PreviewSectionProps) =>
     });
   };
 
+  const handleOpenInNewTab = () => {
+    if (!generatedPage?.html) return;
+    
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(generatedPage.html);
+      newWindow.document.close();
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -49,6 +59,15 @@ const PreviewSection = ({ generatedPage, isGenerating }: PreviewSectionProps) =>
 
           {generatedPage && (
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenInNewTab}
+                className="hover:bg-accent/10"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                New Tab
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
