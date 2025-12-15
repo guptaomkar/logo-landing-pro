@@ -28,163 +28,143 @@ serve(async (req) => {
     console.log('Generating landing page for:', companyName);
     console.log('Company description:', companyDescription);
 
-    // First, generate a color palette based on the company description
-    const colorPrompt = `Based on this company description, suggest a professional color palette that matches their brand identity and industry.
+    // Combined prompt for structure, colors, and content
+    const mainPrompt = `Analyze this company and generate a complete landing page design with appropriate structure.
 
 COMPANY: ${companyName}
 DESCRIPTION: ${companyDescription}
 
-Consider:
-- Industry conventions (e.g., blue for finance/trust, green for eco/health, orange for energy/creativity)
-- The mood and personality suggested by the description
-- Professional appeal and readability
+Based on the company type and industry, determine:
+1. The most suitable layout style
+2. Which sections are most relevant
+3. Appropriate color palette
+4. All content
 
-Return ONLY a JSON object with these exact hex color codes:
+Return a JSON object with this structure:
 {
-  "primary": "#hexcode",
-  "secondary": "#hexcode", 
-  "accent": "#hexcode",
-  "reasoning": "Brief explanation of why these colors fit"
+  "layout": {
+    "style": "modern-saas" | "corporate" | "creative-agency" | "ecommerce" | "startup" | "professional-services",
+    "heroStyle": "centered" | "split" | "video-bg" | "minimal" | "bold",
+    "navStyle": "transparent" | "solid" | "floating",
+    "features": {
+      "hasStats": boolean,
+      "hasPricing": boolean,
+      "hasTeam": boolean,
+      "hasFAQ": boolean,
+      "hasPortfolio": boolean,
+      "hasCTA": boolean,
+      "hasNewsletter": boolean
+    }
+  },
+  "colors": {
+    "primary": "#hexcode",
+    "secondary": "#hexcode",
+    "accent": "#hexcode",
+    "background": "#hexcode",
+    "text": "#hexcode"
+  },
+  "content": {
+    "hero": {
+      "headline": "compelling headline under 60 chars",
+      "subheadline": "value proposition under 160 chars",
+      "ctaText": "action button text",
+      "secondaryCta": "optional secondary CTA text or null"
+    },
+    "stats": [
+      { "value": "100+", "label": "Clients Served" }
+    ],
+    "about": {
+      "title": "section title",
+      "description": "2-3 sentences"
+    },
+    "features": [
+      { "title": "Feature", "description": "1-2 sentences", "icon": "emoji" }
+    ],
+    "services": [
+      { "title": "Service", "description": "1-2 sentences", "price": "optional price or null" }
+    ],
+    "pricing": [
+      { "name": "Plan Name", "price": "$XX/mo", "features": ["feature1", "feature2"], "highlighted": boolean }
+    ],
+    "team": [
+      { "name": "Name", "role": "Title", "bio": "Short bio" }
+    ],
+    "testimonials": [
+      { "name": "Name", "role": "Title", "company": "Company", "content": "Quote", "rating": 5 }
+    ],
+    "faq": [
+      { "question": "Question?", "answer": "Answer" }
+    ],
+    "cta": {
+      "headline": "Final CTA headline",
+      "subheadline": "Supporting text",
+      "buttonText": "CTA button"
+    }
+  }
 }
 
-Choose colors that work well together and create a cohesive, professional look. Return ONLY valid JSON, no markdown.`;
+IMPORTANT GUIDELINES:
+- Choose layout.style based on company type (tech startup = modern-saas, law firm = professional-services, etc.)
+- Only set hasStats/hasPricing/hasTeam/hasFAQ/hasPortfolio to true if relevant to this company
+- Generate 3-6 features, 2-4 services, 3 testimonials
+- If hasPricing is true, generate 2-3 pricing tiers
+- If hasStats is true, generate 3-4 impressive but realistic stats
+- If hasTeam is true, generate 3-4 team members
+- If hasFAQ is true, generate 4-6 relevant FAQs
+- Colors should match the industry (finance=blue, health=green, creative=vibrant, etc.)
+- All content must be highly specific to this company's actual offerings
 
-    // Make parallel requests for colors and content
-    const [colorResponse, contentResponse] = await Promise.all([
-      fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: 'You are a professional brand designer. Return only valid JSON.' },
-            { role: 'user', content: colorPrompt }
-          ],
-        }),
+Return ONLY valid JSON, no markdown.`;
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are an expert web designer and content strategist. Analyze companies deeply to create perfectly tailored landing pages. Return only valid JSON.' 
+          },
+          { role: 'user', content: mainPrompt }
+        ],
       }),
-      fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a professional landing page content creator. Always return valid JSON only, no markdown code blocks.'
-            },
-            {
-              role: 'user',
-              content: `Generate professional landing page content for a company named "${companyName}".
+    });
 
-COMPANY DESCRIPTION:
-${companyDescription}
-
-Based on this description, create highly relevant and tailored content that accurately represents what this company does. The content should reflect the company's actual services, products, and value proposition.
-
-Return a JSON object with the following structure:
-{
-  "hero": {
-    "headline": "main headline (under 60 characters, compelling and specific to the company)",
-    "subheadline": "compelling subheadline (under 160 characters, highlighting key value proposition)",
-    "ctaText": "call to action button text"
-  },
-  "about": {
-    "title": "section title",
-    "description": "2-3 sentences about the company value proposition based on the description provided"
-  },
-  "features": [
-    {
-      "title": "feature name (relevant to the company)",
-      "description": "feature description (1-2 sentences)",
-      "icon": "emoji that represents this feature"
-    }
-  ],
-  "services": [
-    {
-      "title": "service name (based on what the company actually offers)",
-      "description": "service description (1-2 sentences)"
-    }
-  ],
-  "testimonials": [
-    {
-      "name": "realistic person name",
-      "role": "job title relevant to the company's target audience",
-      "content": "testimonial quote that reflects the company's value",
-      "rating": 5
-    }
-  ]
-}
-
-Generate 4-6 features, 3-4 services, and 3 testimonials. Make everything highly relevant to the company description provided. Return ONLY valid JSON, no markdown formatting.`
-            }
-          ],
-        }),
-      })
-    ]);
-
-    if (!colorResponse.ok || !contentResponse.ok) {
-      const errorText = !colorResponse.ok ? await colorResponse.text() : await contentResponse.text();
+    if (!response.ok) {
+      const errorText = await response.text();
       console.error('AI API Error:', errorText);
       throw new Error('AI API error');
     }
 
-    const [colorData, contentData] = await Promise.all([
-      colorResponse.json(),
-      contentResponse.json()
-    ]);
-
-    // Parse color response
-    let extractedColors = {
-      primary: '#9b87f5',
-      secondary: '#0EA5E9',
-      accent: '#06b6d4',
-    };
+    const data = await response.json();
+    const responseText = data.choices[0].message.content;
     
+    let parsed;
     try {
-      const colorText = colorData.choices[0].message.content;
-      const cleanedColorText = colorText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const colorResult = JSON.parse(cleanedColorText);
-      extractedColors = {
-        primary: colorResult.primary || extractedColors.primary,
-        secondary: colorResult.secondary || extractedColors.secondary,
-        accent: colorResult.accent || extractedColors.accent,
-      };
-      console.log('Generated colors:', extractedColors, 'Reasoning:', colorResult.reasoning);
-    } catch (colorError) {
-      console.error('Color parse error, using defaults:', colorError);
-    }
-
-    // Parse content response
-    const contentText = contentData.choices[0].message.content;
-    let content;
-    try {
-      const cleanedContent = contentText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      content = JSON.parse(cleanedContent);
+      const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      parsed = JSON.parse(cleaned);
     } catch (parseError) {
-      console.error('JSON Parse Error:', parseError, 'Content:', contentText);
+      console.error('JSON Parse Error:', parseError, 'Content:', responseText);
       throw new Error('Failed to parse AI response');
     }
 
-    console.log('Generated content:', JSON.stringify(content).substring(0, 200));
+    console.log('Generated layout:', parsed.layout);
+    console.log('Generated colors:', parsed.colors);
 
-    // Generate HTML
-    const html = generateHTML(companyName, content, logoBase64, extractedColors);
-    
-    // Generate React
-    const react = generateReact(companyName, content, logoBase64, extractedColors);
+    const html = generateHTML(companyName, parsed, logoBase64);
+    const react = generateReact(companyName, parsed, logoBase64);
 
     return new Response(
       JSON.stringify({
         html,
         react,
-        content,
-        colors: extractedColors,
+        content: parsed.content,
+        colors: parsed.colors,
+        layout: parsed.layout,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -199,7 +179,33 @@ Generate 4-6 features, 3-4 services, and 3 testimonials. Make everything highly 
   }
 });
 
-function generateHTML(companyName: string, content: any, logoBase64: string, colors: any) {
+function generateHTML(companyName: string, data: any, logoBase64: string) {
+  const { layout, colors, content } = data;
+  const c = colors;
+  const f = layout.features;
+  
+  const heroStyles: Record<string, string> = {
+    'centered': `text-align: center; padding: 120px 20px;`,
+    'split': `display: grid; grid-template-columns: 1fr 1fr; align-items: center; padding: 80px 20px; gap: 60px;`,
+    'minimal': `text-align: center; padding: 150px 20px; background: ${c.background};`,
+    'bold': `text-align: center; padding: 100px 20px; position: relative;`,
+    'video-bg': `text-align: center; padding: 120px 20px; position: relative;`,
+  };
+
+  const layoutStyles: Record<string, { bodyBg: string, sectionAlt: string }> = {
+    'modern-saas': { bodyBg: '#ffffff', sectionAlt: '#f8fafc' },
+    'corporate': { bodyBg: '#ffffff', sectionAlt: '#f3f4f6' },
+    'creative-agency': { bodyBg: '#0a0a0a', sectionAlt: '#111111' },
+    'ecommerce': { bodyBg: '#ffffff', sectionAlt: '#fafafa' },
+    'startup': { bodyBg: '#ffffff', sectionAlt: '#f0f9ff' },
+    'professional-services': { bodyBg: '#ffffff', sectionAlt: '#f9fafb' },
+  };
+
+  const isDark = layout.style === 'creative-agency';
+  const textColor = isDark ? '#ffffff' : c.text || '#1f2937';
+  const mutedText = isDark ? '#a1a1aa' : '#6b7280';
+  const ls = layoutStyles[layout.style] || layoutStyles['modern-saas'];
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -207,139 +213,308 @@ function generateHTML(companyName: string, content: any, logoBase64: string, col
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${companyName} - ${content.hero.headline}</title>
   <meta name="description" content="${content.hero.subheadline}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       line-height: 1.6;
-      color: #333;
+      color: ${textColor};
+      background: ${ls.bodyBg};
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
     
-    /* Hero Section */
-    .hero { 
-      background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+    /* Navigation */
+    nav {
+      position: ${layout.navStyle === 'floating' ? 'fixed' : 'absolute'};
+      top: ${layout.navStyle === 'floating' ? '20px' : '0'};
+      left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      ${layout.navStyle === 'solid' ? `background: ${isDark ? '#111' : '#fff'}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);` : ''}
+      ${layout.navStyle === 'floating' ? `margin: 0 auto; max-width: 1160px; background: ${isDark ? 'rgba(17,17,17,0.95)' : 'rgba(255,255,255,0.95)'}; backdrop-filter: blur(10px); border-radius: 100px; padding: 12px 30px;` : ''}
+    }
+    nav .container { display: flex; justify-content: space-between; align-items: center; }
+    .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .nav-logo img { height: 40px; width: auto; }
+    .nav-logo span { font-weight: 700; font-size: 1.25rem; }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { text-decoration: none; color: ${isDark ? '#e5e5e5' : '#4b5563'}; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: ${c.primary}; }
+    .nav-cta {
+      background: ${c.primary};
       color: white;
-      padding: 100px 0;
-      text-align: center;
-    }
-    .hero img { max-width: 150px; margin-bottom: 30px; }
-    .hero h1 { font-size: 3rem; margin-bottom: 20px; font-weight: 700; }
-    .hero p { font-size: 1.25rem; margin-bottom: 30px; opacity: 0.95; }
-    .cta-button {
-      display: inline-block;
-      padding: 15px 40px;
-      background: white;
-      color: ${colors.primary};
+      padding: 10px 24px;
+      border-radius: 8px;
       text-decoration: none;
-      border-radius: 50px;
       font-weight: 600;
-      transition: transform 0.3s;
+      transition: all 0.2s;
     }
-    .cta-button:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 12px ${c.primary}40; }
+    
+    /* Hero */
+    .hero { 
+      background: ${layout.heroStyle === 'bold' ? `linear-gradient(135deg, ${c.primary}, ${c.secondary})` : isDark ? '#0a0a0a' : `linear-gradient(180deg, ${c.background || '#f8fafc'} 0%, #ffffff 100%)`};
+      color: ${layout.heroStyle === 'bold' ? 'white' : textColor};
+      ${heroStyles[layout.heroStyle] || heroStyles['centered']}
+      min-height: ${layout.heroStyle === 'minimal' ? '90vh' : '80vh'};
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .hero-content { ${layout.heroStyle === 'split' ? '' : 'max-width: 800px; margin: 0 auto;'} }
+    .hero h1 { 
+      font-size: clamp(2.5rem, 5vw, 4rem); 
+      font-weight: 800; 
+      margin-bottom: 24px; 
+      line-height: 1.1;
+      ${layout.heroStyle !== 'bold' ? `background: linear-gradient(135deg, ${c.primary}, ${c.secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;` : ''}
+    }
+    .hero p { font-size: 1.25rem; margin-bottom: 32px; opacity: 0.9; color: ${layout.heroStyle === 'bold' ? 'rgba(255,255,255,0.9)' : mutedText}; max-width: 600px; ${layout.heroStyle === 'centered' || layout.heroStyle === 'bold' ? 'margin-left: auto; margin-right: auto;' : ''} }
+    .hero-buttons { display: flex; gap: 16px; ${layout.heroStyle === 'centered' || layout.heroStyle === 'bold' ? 'justify-content: center;' : ''} flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 16px 32px;
+      background: ${layout.heroStyle === 'bold' ? 'white' : c.primary};
+      color: ${layout.heroStyle === 'bold' ? c.primary : 'white'};
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s;
+      box-shadow: 0 4px 14px ${c.primary}30;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px ${c.primary}40; }
+    .btn-secondary {
+      padding: 16px 32px;
+      background: transparent;
+      color: ${layout.heroStyle === 'bold' ? 'white' : textColor};
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      border: 2px solid ${layout.heroStyle === 'bold' ? 'rgba(255,255,255,0.3)' : c.primary + '30'};
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover { background: ${layout.heroStyle === 'bold' ? 'rgba(255,255,255,0.1)' : c.primary + '10'}; }
+    
+    /* Stats */
+    .stats { padding: 60px 0; background: ${isDark ? '#111' : ls.sectionAlt}; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; text-align: center; }
+    .stat-item h3 { font-size: 3rem; font-weight: 800; color: ${c.primary}; margin-bottom: 8px; }
+    .stat-item p { color: ${mutedText}; font-weight: 500; }
     
     /* Section Styles */
-    section { padding: 80px 0; }
-    h2 { font-size: 2.5rem; text-align: center; margin-bottom: 50px; color: ${colors.primary}; }
-    
-    /* About Section */
-    .about { background: #f9fafb; }
-    .about p { text-align: center; max-width: 800px; margin: 0 auto; font-size: 1.1rem; }
+    section { padding: 100px 0; }
+    .section-header { text-align: center; max-width: 700px; margin: 0 auto 60px; }
+    .section-header h2 { font-size: 2.5rem; font-weight: 700; margin-bottom: 16px; color: ${textColor}; }
+    .section-header p { color: ${mutedText}; font-size: 1.1rem; }
+    .section-alt { background: ${ls.sectionAlt}; }
     
     /* Features Grid */
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 30px;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
     }
     .feature-card {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      text-align: center;
-      transition: transform 0.3s;
+      background: ${isDark ? '#1a1a1a' : 'white'};
+      padding: 32px;
+      border-radius: 16px;
+      ${isDark ? '' : 'box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'}
+      border: 1px solid ${isDark ? '#2a2a2a' : '#e5e7eb'};
+      transition: all 0.3s;
     }
-    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.15); }
-    .feature-card .icon { font-size: 3rem; margin-bottom: 15px; }
-    .feature-card h3 { color: ${colors.secondary}; margin-bottom: 10px; }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(0,0,0,0.15); border-color: ${c.primary}40; }
+    .feature-card .icon { 
+      font-size: 2.5rem; 
+      margin-bottom: 20px;
+      width: 60px; height: 60px;
+      display: flex; align-items: center; justify-content: center;
+      background: ${c.primary}15;
+      border-radius: 12px;
+    }
+    .feature-card h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 12px; color: ${textColor}; }
+    .feature-card p { color: ${mutedText}; line-height: 1.7; }
     
     /* Services */
-    .services { background: #f9fafb; }
-    .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+    .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
     .service-card {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      border-left: 4px solid ${colors.accent};
+      background: ${isDark ? '#1a1a1a' : 'white'};
+      padding: 32px;
+      border-radius: 16px;
+      border-left: 4px solid ${c.primary};
+      ${isDark ? '' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.05);'}
     }
+    .service-card h3 { font-weight: 600; margin-bottom: 12px; color: ${textColor}; }
+    .service-card p { color: ${mutedText}; }
+    .service-card .price { margin-top: 16px; font-size: 1.5rem; font-weight: 700; color: ${c.primary}; }
+    
+    /* Pricing */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto; }
+    .pricing-card {
+      background: ${isDark ? '#1a1a1a' : 'white'};
+      padding: 40px;
+      border-radius: 20px;
+      border: 2px solid ${isDark ? '#2a2a2a' : '#e5e7eb'};
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .pricing-card.highlighted {
+      border-color: ${c.primary};
+      transform: scale(1.05);
+      box-shadow: 0 20px 40px -12px ${c.primary}30;
+    }
+    .pricing-card h3 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; }
+    .pricing-card .price { font-size: 3rem; font-weight: 800; color: ${c.primary}; margin: 20px 0; }
+    .pricing-card .price span { font-size: 1rem; font-weight: 400; color: ${mutedText}; }
+    .pricing-card ul { list-style: none; text-align: left; margin: 24px 0; }
+    .pricing-card li { padding: 12px 0; color: ${mutedText}; display: flex; align-items: center; gap: 12px; }
+    .pricing-card li::before { content: '✓'; color: ${c.primary}; font-weight: 700; }
+    .pricing-card .btn-primary { width: 100%; justify-content: center; margin-top: 24px; }
     
     /* Testimonials */
-    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
     .testimonial-card {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      background: ${isDark ? '#1a1a1a' : 'white'};
+      padding: 32px;
+      border-radius: 16px;
+      ${isDark ? '' : 'box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'}
     }
-    .testimonial-card .stars { color: #fbbf24; margin-bottom: 15px; }
-    .testimonial-card .author { margin-top: 15px; font-weight: 600; color: ${colors.primary}; }
+    .testimonial-card .stars { color: #fbbf24; font-size: 1.25rem; margin-bottom: 16px; }
+    .testimonial-card .quote { font-size: 1.1rem; line-height: 1.7; margin-bottom: 24px; color: ${textColor}; font-style: italic; }
+    .testimonial-card .author { display: flex; align-items: center; gap: 16px; }
+    .testimonial-card .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: ${c.primary}20; display: flex; align-items: center; justify-content: center; font-weight: 600; color: ${c.primary}; }
+    .testimonial-card .author-info h4 { font-weight: 600; color: ${textColor}; }
+    .testimonial-card .author-info p { color: ${mutedText}; font-size: 0.9rem; }
+    
+    /* Team */
+    .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 32px; }
+    .team-card { text-align: center; }
+    .team-card .avatar { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, ${c.primary}, ${c.secondary}); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: white; font-weight: 700; }
+    .team-card h3 { font-weight: 600; margin-bottom: 4px; }
+    .team-card .role { color: ${c.primary}; font-weight: 500; margin-bottom: 12px; }
+    .team-card p { color: ${mutedText}; font-size: 0.95rem; }
+    
+    /* FAQ */
+    .faq-list { max-width: 800px; margin: 0 auto; }
+    .faq-item { border-bottom: 1px solid ${isDark ? '#2a2a2a' : '#e5e7eb'}; padding: 24px 0; }
+    .faq-item h3 { font-weight: 600; margin-bottom: 12px; color: ${textColor}; }
+    .faq-item p { color: ${mutedText}; line-height: 1.7; }
+    
+    /* CTA Section */
+    .cta-section { 
+      background: linear-gradient(135deg, ${c.primary}, ${c.secondary}); 
+      color: white; 
+      text-align: center;
+      padding: 100px 20px;
+      border-radius: ${layout.style === 'modern-saas' ? '24px' : '0'};
+      ${layout.style === 'modern-saas' ? 'margin: 60px 24px;' : ''}
+    }
+    .cta-section h2 { font-size: 2.5rem; font-weight: 700; margin-bottom: 16px; }
+    .cta-section p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 32px; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .cta-section .btn-primary { background: white; color: ${c.primary}; }
     
     /* Contact Form */
-    .contact { background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary}); color: white; }
-    .contact form { max-width: 500px; margin: 0 auto; }
-    .contact input, .contact textarea {
+    .contact-form { max-width: 500px; margin: 0 auto; }
+    .contact-form input, .contact-form textarea {
       width: 100%;
-      padding: 15px;
-      margin-bottom: 15px;
-      border: none;
-      border-radius: 5px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 2px solid ${isDark ? '#2a2a2a' : '#e5e7eb'};
+      border-radius: 12px;
       font-size: 1rem;
+      background: ${isDark ? '#1a1a1a' : 'white'};
+      color: ${textColor};
+      transition: border-color 0.2s;
     }
-    .contact button {
-      width: 100%;
-      padding: 15px;
-      background: white;
-      color: ${colors.primary};
-      border: none;
-      border-radius: 5px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    .contact-form input:focus, .contact-form textarea:focus { outline: none; border-color: ${c.primary}; }
     
     /* Footer */
-    footer { background: #1f2937; color: white; padding: 30px 0; text-align: center; }
+    footer { background: ${isDark ? '#050505' : '#111827'}; color: white; padding: 60px 0 30px; }
+    .footer-content { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    .footer-brand p { color: #9ca3af; margin-top: 16px; max-width: 300px; }
+    .footer-links h4 { font-weight: 600; margin-bottom: 20px; }
+    .footer-links a { display: block; color: #9ca3af; text-decoration: none; margin-bottom: 12px; transition: color 0.2s; }
+    .footer-links a:hover { color: white; }
+    .footer-bottom { border-top: 1px solid #374151; padding-top: 30px; text-align: center; color: #9ca3af; }
     
     @media (max-width: 768px) {
       .hero h1 { font-size: 2rem; }
-      h2 { font-size: 1.75rem; }
+      .hero { padding: 100px 20px 60px; min-height: auto; }
+      nav .nav-links { display: none; }
+      .footer-content { grid-template-columns: 1fr; }
+      .pricing-card.highlighted { transform: scale(1); }
+      section { padding: 60px 0; }
     }
   </style>
 </head>
 <body>
+  <!-- Navigation -->
+  <nav>
+    <div class="container">
+      <a href="#" class="nav-logo">
+        <img src="${logoBase64}" alt="${companyName}">
+        <span>${companyName}</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#services">Services</a>
+        ${f.hasPricing ? '<a href="#pricing">Pricing</a>' : ''}
+        ${f.hasTeam ? '<a href="#team">Team</a>' : ''}
+        <a href="#contact">Contact</a>
+        <a href="#contact" class="nav-cta">${content.hero.ctaText}</a>
+      </div>
+    </div>
+  </nav>
+
   <!-- Hero Section -->
   <section class="hero">
     <div class="container">
-      <img src="${logoBase64}" alt="${companyName} Logo">
-      <h1>${content.hero.headline}</h1>
-      <p>${content.hero.subheadline}</p>
-      <a href="#contact" class="cta-button">${content.hero.ctaText}</a>
+      <div class="hero-content">
+        <h1>${content.hero.headline}</h1>
+        <p>${content.hero.subheadline}</p>
+        <div class="hero-buttons">
+          <a href="#contact" class="btn-primary">${content.hero.ctaText} →</a>
+          ${content.hero.secondaryCta ? `<a href="#features" class="btn-secondary">${content.hero.secondaryCta}</a>` : ''}
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- About Section -->
-  <section class="about">
+  ${f.hasStats && content.stats?.length ? `
+  <!-- Stats Section -->
+  <section class="stats">
     <div class="container">
-      <h2>${content.about.title}</h2>
-      <p>${content.about.description}</p>
+      <div class="stats-grid">
+        ${content.stats.map((s: any) => `
+          <div class="stat-item">
+            <h3>${s.value}</h3>
+            <p>${s.label}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>
+  ` : ''}
+
+  <!-- About Section -->
+  <section id="about">
+    <div class="container">
+      <div class="section-header">
+        <h2>${content.about.title}</h2>
+        <p>${content.about.description}</p>
+      </div>
     </div>
   </section>
 
   <!-- Features Section -->
-  <section class="features">
+  <section id="features" class="section-alt">
     <div class="container">
-      <h2>Our Features</h2>
+      <div class="section-header">
+        <h2>Why Choose ${companyName}</h2>
+        <p>Discover what makes us different</p>
+      </div>
       <div class="features-grid">
         ${content.features.map((f: any) => `
           <div class="feature-card">
@@ -353,32 +528,66 @@ function generateHTML(companyName: string, content: any, logoBase64: string, col
   </section>
 
   <!-- Services Section -->
-  <section class="services">
+  <section id="services">
     <div class="container">
-      <h2>Our Services</h2>
+      <div class="section-header">
+        <h2>Our Services</h2>
+        <p>Comprehensive solutions tailored to your needs</p>
+      </div>
       <div class="services-grid">
         ${content.services.map((s: any) => `
           <div class="service-card">
             <h3>${s.title}</h3>
             <p>${s.description}</p>
+            ${s.price ? `<div class="price">${s.price}</div>` : ''}
           </div>
         `).join('')}
       </div>
     </div>
   </section>
 
-  <!-- Testimonials Section -->
-  <section class="testimonials">
+  ${f.hasPricing && content.pricing?.length ? `
+  <!-- Pricing Section -->
+  <section id="pricing" class="section-alt">
     <div class="container">
-      <h2>What Our Clients Say</h2>
+      <div class="section-header">
+        <h2>Simple, Transparent Pricing</h2>
+        <p>Choose the plan that works for you</p>
+      </div>
+      <div class="pricing-grid">
+        ${content.pricing.map((p: any) => `
+          <div class="pricing-card ${p.highlighted ? 'highlighted' : ''}">
+            <h3>${p.name}</h3>
+            <div class="price">${p.price}</div>
+            <ul>
+              ${p.features.map((feat: string) => `<li>${feat}</li>`).join('')}
+            </ul>
+            <a href="#contact" class="btn-primary">Get Started</a>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>
+  ` : ''}
+
+  <!-- Testimonials Section -->
+  <section id="testimonials" ${!f.hasPricing ? 'class="section-alt"' : ''}>
+    <div class="container">
+      <div class="section-header">
+        <h2>What Our Clients Say</h2>
+        <p>Don't just take our word for it</p>
+      </div>
       <div class="testimonials-grid">
         ${content.testimonials.map((t: any) => `
           <div class="testimonial-card">
-            <div class="stars">${'★'.repeat(t.rating)}</div>
-            <p>"${t.content}"</p>
+            <div class="stars">${'★'.repeat(t.rating || 5)}</div>
+            <p class="quote">"${t.content}"</p>
             <div class="author">
-              <div>${t.name}</div>
-              <div style="font-weight: normal; opacity: 0.8;">${t.role}</div>
+              <div class="author-avatar">${t.name.charAt(0)}</div>
+              <div class="author-info">
+                <h4>${t.name}</h4>
+                <p>${t.role}${t.company ? `, ${t.company}` : ''}</p>
+              </div>
             </div>
           </div>
         `).join('')}
@@ -386,15 +595,69 @@ function generateHTML(companyName: string, content: any, logoBase64: string, col
     </div>
   </section>
 
-  <!-- Contact Section -->
-  <section class="contact" id="contact">
+  ${f.hasTeam && content.team?.length ? `
+  <!-- Team Section -->
+  <section id="team" class="section-alt">
     <div class="container">
-      <h2 style="color: white;">Get In Touch</h2>
-      <form>
+      <div class="section-header">
+        <h2>Meet Our Team</h2>
+        <p>The people behind ${companyName}</p>
+      </div>
+      <div class="team-grid">
+        ${content.team.map((m: any) => `
+          <div class="team-card">
+            <div class="avatar">${m.name.charAt(0)}</div>
+            <h3>${m.name}</h3>
+            <p class="role">${m.role}</p>
+            <p>${m.bio}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>
+  ` : ''}
+
+  ${f.hasFAQ && content.faq?.length ? `
+  <!-- FAQ Section -->
+  <section id="faq">
+    <div class="container">
+      <div class="section-header">
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know</p>
+      </div>
+      <div class="faq-list">
+        ${content.faq.map((q: any) => `
+          <div class="faq-item">
+            <h3>${q.question}</h3>
+            <p>${q.answer}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>
+  ` : ''}
+
+  ${f.hasCTA && content.cta ? `
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <h2>${content.cta.headline}</h2>
+    <p>${content.cta.subheadline}</p>
+    <a href="#contact" class="btn-primary">${content.cta.buttonText} →</a>
+  </section>
+  ` : ''}
+
+  <!-- Contact Section -->
+  <section id="contact" class="section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2>Get In Touch</h2>
+        <p>Ready to get started? Contact us today.</p>
+      </div>
+      <form class="contact-form">
         <input type="text" placeholder="Your Name" required>
         <input type="email" placeholder="Your Email" required>
-        <textarea rows="4" placeholder="Your Message" required></textarea>
-        <button type="submit">Send Message</button>
+        <textarea rows="5" placeholder="Your Message" required></textarea>
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Send Message</button>
       </form>
     </div>
   </section>
@@ -402,81 +665,273 @@ function generateHTML(companyName: string, content: any, logoBase64: string, col
   <!-- Footer -->
   <footer>
     <div class="container">
-      <p>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="nav-logo" style="margin-bottom: 16px;">
+            <img src="${logoBase64}" alt="${companyName}" style="height: 40px;">
+            <span>${companyName}</span>
+          </div>
+          <p>${content.about.description.substring(0, 150)}...</p>
+        </div>
+        <div class="footer-links">
+          <h4>Quick Links</h4>
+          <a href="#features">Features</a>
+          <a href="#services">Services</a>
+          ${f.hasPricing ? '<a href="#pricing">Pricing</a>' : ''}
+          <a href="#contact">Contact</a>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <a href="#about">About Us</a>
+          ${f.hasTeam ? '<a href="#team">Our Team</a>' : ''}
+          <a href="#">Careers</a>
+          <a href="#">Blog</a>
+        </div>
+        <div class="footer-links">
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Cookie Policy</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+      </div>
     </div>
   </footer>
 </body>
 </html>`;
 }
 
-function generateReact(companyName: string, content: any, logoBase64: string, colors: any) {
+function generateReact(companyName: string, data: any, logoBase64: string) {
+  const { layout, colors, content } = data;
+  const c = colors;
+  const f = layout.features;
+  const isDark = layout.style === 'creative-agency';
+
   return `import React from 'react';
 
 const LandingPage = () => {
-  return (
-    <div>
-      {/* Hero Section */}
-      <section style={{
-        background: \`linear-gradient(135deg, ${colors.primary}, ${colors.secondary})\`,
-        color: 'white',
-        padding: '100px 20px',
-        textAlign: 'center'
-      }}>
-        <img src="${logoBase64}" alt="${companyName}" style={{ maxWidth: '150px', marginBottom: '30px' }} />
-        <h1 style={{ fontSize: '3rem', marginBottom: '20px' }}>${content.hero.headline}</h1>
-        <p style={{ fontSize: '1.25rem', marginBottom: '30px' }}>${content.hero.subheadline}</p>
-        <a href="#contact" style={{
-          display: 'inline-block',
-          padding: '15px 40px',
-          background: 'white',
-          color: '${colors.primary}',
-          textDecoration: 'none',
-          borderRadius: '50px',
-          fontWeight: 600
-        }}>
-          ${content.hero.ctaText}
-        </a>
-      </section>
+  const colors = {
+    primary: '${c.primary}',
+    secondary: '${c.secondary}',
+    accent: '${c.accent}',
+    background: '${c.background || '#ffffff'}',
+    text: '${c.text || '#1f2937'}'
+  };
 
-      {/* About Section */}
-      <section style={{ padding: '80px 20px', background: '#f9fafb' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '50px', color: '${colors.primary}' }}>
-            ${content.about.title}
-          </h2>
-          <p style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto', fontSize: '1.1rem' }}>
-            ${content.about.description}
+  const layoutStyle = '${layout.style}';
+  const isDark = layoutStyle === 'creative-agency';
+
+  const styles = {
+    body: {
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      lineHeight: 1.6,
+      color: isDark ? '#ffffff' : colors.text,
+      background: isDark ? '#0a0a0a' : '#ffffff',
+    },
+    container: {
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '0 24px',
+    },
+    nav: {
+      position: 'fixed' as const,
+      top: '20px',
+      left: '20px',
+      right: '20px',
+      zIndex: 100,
+      background: isDark ? 'rgba(17,17,17,0.95)' : 'rgba(255,255,255,0.95)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '100px',
+      padding: '12px 30px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    hero: {
+      background: '${layout.heroStyle === 'bold' ? `linear-gradient(135deg, ${c.primary}, ${c.secondary})` : isDark ? '#0a0a0a' : `linear-gradient(180deg, ${c.background || '#f8fafc'} 0%, #ffffff 100%)`}',
+      color: '${layout.heroStyle === 'bold' ? 'white' : isDark ? '#ffffff' : c.text}',
+      padding: '150px 20px 100px',
+      minHeight: '90vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center' as const,
+    },
+    heroTitle: {
+      fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+      fontWeight: 800,
+      marginBottom: '24px',
+      lineHeight: 1.1,
+      ${layout.heroStyle !== 'bold' ? `background: 'linear-gradient(135deg, ${c.primary}, ${c.secondary})', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',` : ''}
+    },
+    btnPrimary: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '16px 32px',
+      background: '${layout.heroStyle === 'bold' ? 'white' : c.primary}',
+      color: '${layout.heroStyle === 'bold' ? c.primary : 'white'}',
+      textDecoration: 'none',
+      borderRadius: '12px',
+      fontWeight: 600,
+      fontSize: '1rem',
+      border: 'none',
+      cursor: 'pointer',
+    },
+    section: {
+      padding: '100px 0',
+    },
+    sectionAlt: {
+      padding: '100px 0',
+      background: isDark ? '#111111' : '#f8fafc',
+    },
+    sectionHeader: {
+      textAlign: 'center' as const,
+      maxWidth: '700px',
+      margin: '0 auto 60px',
+    },
+    card: {
+      background: isDark ? '#1a1a1a' : 'white',
+      padding: '32px',
+      borderRadius: '16px',
+      border: \`1px solid \${isDark ? '#2a2a2a' : '#e5e7eb'}\`,
+    },
+  };
+
+  return (
+    <div style={styles.body}>
+      {/* Navigation */}
+      <nav style={styles.nav}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="${logoBase64}" alt="${companyName}" style={{ height: '40px' }} />
+          <span style={{ fontWeight: 700, fontSize: '1.25rem' }}>${companyName}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+          <a href="#features" style={{ textDecoration: 'none', color: isDark ? '#e5e5e5' : '#4b5563', fontWeight: 500 }}>Features</a>
+          <a href="#services" style={{ textDecoration: 'none', color: isDark ? '#e5e5e5' : '#4b5563', fontWeight: 500 }}>Services</a>
+          <a href="#contact" style={{ textDecoration: 'none', color: isDark ? '#e5e5e5' : '#4b5563', fontWeight: 500 }}>Contact</a>
+          <a href="#contact" style={{ ...styles.btnPrimary, padding: '10px 24px' }}>${content.hero.ctaText}</a>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section style={styles.hero}>
+        <div style={{ maxWidth: '800px' }}>
+          <h1 style={styles.heroTitle}>${content.hero.headline}</h1>
+          <p style={{ fontSize: '1.25rem', marginBottom: '32px', opacity: 0.9, color: isDark ? '#a1a1aa' : '#6b7280' }}>
+            ${content.hero.subheadline}
           </p>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+            <a href="#contact" style={styles.btnPrimary}>${content.hero.ctaText} →</a>
+            ${content.hero.secondaryCta ? `<a href="#features" style={{ ...styles.btnPrimary, background: 'transparent', border: '2px solid ${c.primary}30', color: isDark ? 'white' : colors.text }}>${content.hero.secondaryCta}</a>` : ''}
+          </div>
         </div>
       </section>
 
+      ${f.hasStats && content.stats?.length ? `
+      {/* Stats Section */}
+      <section style={{ padding: '60px 0', background: isDark ? '#111' : '#f8fafc' }}>
+        <div style={styles.container}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px', textAlign: 'center' }}>
+            ${content.stats.map((s: any) => `
+              <div>
+                <h3 style={{ fontSize: '3rem', fontWeight: 800, color: colors.primary, marginBottom: '8px' }}>${s.value}</h3>
+                <p style={{ color: '#6b7280', fontWeight: 500 }}>${s.label}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+      ` : ''}
+
       {/* Features Section */}
-      <section style={{ padding: '80px 20px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '50px', color: '${colors.primary}' }}>
-            Our Features
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
-            ${content.features.map((f: any) => `
-              <div style={{
-                background: 'white',
-                padding: '30px',
-                borderRadius: '10px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '15px' }}>${f.icon}</div>
-                <h3 style={{ color: '${colors.secondary}', marginBottom: '10px' }}>${f.title}</h3>
-                <p>${f.description}</p>
+      <section id="features" style={styles.sectionAlt}>
+        <div style={styles.container}>
+          <div style={styles.sectionHeader}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '16px' }}>Why Choose ${companyName}</h2>
+            <p style={{ color: isDark ? '#a1a1aa' : '#6b7280', fontSize: '1.1rem' }}>Discover what makes us different</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+            ${content.features.map((feat: any) => `
+              <div style={styles.card}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '20px', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '${c.primary}15', borderRadius: '12px' }}>${feat.icon}</div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '12px' }}>${feat.title}</h3>
+                <p style={{ color: isDark ? '#a1a1aa' : '#6b7280', lineHeight: 1.7 }}>${feat.description}</p>
               </div>
             `).join('')}
           </div>
         </div>
       </section>
 
+      {/* Services Section */}
+      <section id="services" style={styles.section}>
+        <div style={styles.container}>
+          <div style={styles.sectionHeader}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '16px' }}>Our Services</h2>
+            <p style={{ color: isDark ? '#a1a1aa' : '#6b7280', fontSize: '1.1rem' }}>Comprehensive solutions tailored to your needs</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+            ${content.services.map((s: any) => `
+              <div style={{ ...styles.card, borderLeft: '4px solid ${c.primary}' }}>
+                <h3 style={{ fontWeight: 600, marginBottom: '12px' }}>${s.title}</h3>
+                <p style={{ color: isDark ? '#a1a1aa' : '#6b7280' }}>${s.description}</p>
+                ${s.price ? `<div style={{ marginTop: '16px', fontSize: '1.5rem', fontWeight: 700, color: colors.primary }}>${s.price}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" style={styles.sectionAlt}>
+        <div style={styles.container}>
+          <div style={styles.sectionHeader}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '16px' }}>What Our Clients Say</h2>
+            <p style={{ color: isDark ? '#a1a1aa' : '#6b7280', fontSize: '1.1rem' }}>Don't just take our word for it</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+            ${content.testimonials.map((t: any) => `
+              <div style={styles.card}>
+                <div style={{ color: '#fbbf24', fontSize: '1.25rem', marginBottom: '16px' }}>${'★'.repeat(t.rating || 5)}</div>
+                <p style={{ fontSize: '1.1rem', lineHeight: 1.7, marginBottom: '24px', fontStyle: 'italic' }}>"${t.content}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '${c.primary}20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, color: colors.primary }}>${t.name.charAt(0)}</div>
+                  <div>
+                    <h4 style={{ fontWeight: 600 }}>${t.name}</h4>
+                    <p style={{ color: isDark ? '#a1a1aa' : '#6b7280', fontSize: '0.9rem' }}>${t.role}${t.company ? `, ${t.company}` : ''}</p>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" style={styles.section}>
+        <div style={styles.container}>
+          <div style={styles.sectionHeader}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '16px' }}>Get In Touch</h2>
+            <p style={{ color: isDark ? '#a1a1aa' : '#6b7280', fontSize: '1.1rem' }}>Ready to get started? Contact us today.</p>
+          </div>
+          <form style={{ maxWidth: '500px', margin: '0 auto' }}>
+            <input type="text" placeholder="Your Name" required style={{ width: '100%', padding: '16px', marginBottom: '16px', border: '2px solid ${isDark ? '#2a2a2a' : '#e5e7eb'}', borderRadius: '12px', fontSize: '1rem', background: isDark ? '#1a1a1a' : 'white', color: isDark ? 'white' : colors.text }} />
+            <input type="email" placeholder="Your Email" required style={{ width: '100%', padding: '16px', marginBottom: '16px', border: '2px solid ${isDark ? '#2a2a2a' : '#e5e7eb'}', borderRadius: '12px', fontSize: '1rem', background: isDark ? '#1a1a1a' : 'white', color: isDark ? 'white' : colors.text }} />
+            <textarea rows={5} placeholder="Your Message" required style={{ width: '100%', padding: '16px', marginBottom: '16px', border: '2px solid ${isDark ? '#2a2a2a' : '#e5e7eb'}', borderRadius: '12px', fontSize: '1rem', resize: 'vertical', background: isDark ? '#1a1a1a' : 'white', color: isDark ? 'white' : colors.text }} />
+            <button type="submit" style={{ ...styles.btnPrimary, width: '100%', justifyContent: 'center' }}>Send Message</button>
+          </form>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer style={{ background: '#1f2937', color: 'white', padding: '30px 20px', textAlign: 'center' }}>
-        <p>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+      <footer style={{ background: isDark ? '#050505' : '#111827', color: 'white', padding: '60px 0 30px' }}>
+        <div style={styles.container}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #374151', paddingTop: '30px' }}>
+            <p style={{ color: '#9ca3af' }}>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
