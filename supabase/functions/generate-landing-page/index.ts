@@ -129,19 +129,121 @@ Return ONLY valid JSON.`;
       throw new Error('Failed to parse AI response');
     }
 
-    console.log('Generated layout:', parsed.layout);
-    console.log('Generated colors:', parsed.colors);
+    // Validate and provide fallbacks for all required fields
+    const defaultContent = {
+      hero: {
+        headline: `Welcome to ${companyName}`,
+        subheadline: companyDescription || 'Your trusted partner for success',
+        ctaText: 'Get Started',
+        secondaryCta: 'Learn More'
+      },
+      stats: [
+        { value: '100+', label: 'Happy Clients' },
+        { value: '50+', label: 'Projects Completed' },
+        { value: '5+', label: 'Years Experience' }
+      ],
+      about: {
+        title: `About ${companyName}`,
+        description: companyDescription || `${companyName} is dedicated to providing exceptional services and solutions.`
+      },
+      features: [
+        { title: 'Quality Service', description: 'We deliver excellence in everything we do.', icon: '⭐' },
+        { title: 'Expert Team', description: 'Our professionals are here to help you succeed.', icon: '👥' },
+        { title: 'Fast Delivery', description: 'Quick turnaround without compromising quality.', icon: '🚀' }
+      ],
+      services: [
+        { title: 'Consulting', description: 'Expert guidance for your needs.', price: null },
+        { title: 'Implementation', description: 'End-to-end solution delivery.', price: null },
+        { title: 'Support', description: '24/7 customer support.', price: null }
+      ],
+      pricing: [
+        { name: 'Basic', price: '$29/mo', features: ['Feature 1', 'Feature 2'], highlighted: false },
+        { name: 'Pro', price: '$59/mo', features: ['All Basic features', 'Feature 3', 'Feature 4'], highlighted: true },
+        { name: 'Enterprise', price: 'Contact Us', features: ['All Pro features', 'Custom solutions'], highlighted: false }
+      ],
+      team: [
+        { name: 'John Doe', role: 'CEO', bio: 'Founder and visionary leader.' },
+        { name: 'Jane Smith', role: 'CTO', bio: 'Technical expert with 10+ years experience.' }
+      ],
+      testimonials: [
+        { name: 'Customer Name', role: 'CEO', company: 'Company', content: 'Amazing service and great results!', rating: 5 }
+      ],
+      faq: [
+        { question: 'How do I get started?', answer: 'Simply contact us and we will guide you through the process.' },
+        { question: 'What is your pricing?', answer: 'We offer flexible pricing options to suit your needs.' }
+      ],
+      cta: {
+        headline: 'Ready to Get Started?',
+        subheadline: 'Contact us today to learn more.',
+        buttonText: 'Contact Us'
+      }
+    };
 
-    const html = generateHTML(companyName, parsed, logoBase64);
-    const react = generateReact(companyName, parsed, logoBase64);
+    const defaultLayout = {
+      style: 'modern-saas',
+      heroStyle: 'centered',
+      navStyle: 'solid',
+      features: {
+        hasStats: true,
+        hasPricing: true,
+        hasTeam: false,
+        hasFAQ: true,
+        hasPortfolio: false,
+        hasCTA: true,
+        hasNewsletter: true
+      }
+    };
+
+    const defaultColors = {
+      primary: '#6366f1',
+      secondary: '#8b5cf6',
+      accent: '#f59e0b',
+      background: '#f8fafc',
+      text: '#1f2937'
+    };
+
+    // Merge with defaults to ensure all fields exist
+    const safeContent = {
+      hero: { ...defaultContent.hero, ...(parsed.content?.hero || {}) },
+      stats: parsed.content?.stats?.length ? parsed.content.stats : defaultContent.stats,
+      about: { ...defaultContent.about, ...(parsed.content?.about || {}) },
+      features: parsed.content?.features?.length ? parsed.content.features : defaultContent.features,
+      services: parsed.content?.services?.length ? parsed.content.services : defaultContent.services,
+      pricing: parsed.content?.pricing?.length ? parsed.content.pricing : defaultContent.pricing,
+      team: parsed.content?.team?.length ? parsed.content.team : defaultContent.team,
+      testimonials: parsed.content?.testimonials?.length ? parsed.content.testimonials : defaultContent.testimonials,
+      faq: parsed.content?.faq?.length ? parsed.content.faq : defaultContent.faq,
+      cta: { ...defaultContent.cta, ...(parsed.content?.cta || {}) }
+    };
+
+    const safeLayout = {
+      style: parsed.layout?.style || defaultLayout.style,
+      heroStyle: parsed.layout?.heroStyle || defaultLayout.heroStyle,
+      navStyle: parsed.layout?.navStyle || defaultLayout.navStyle,
+      features: { ...defaultLayout.features, ...(parsed.layout?.features || {}) }
+    };
+
+    const safeColors = { ...defaultColors, ...(parsed.colors || {}) };
+
+    const safeData = {
+      layout: safeLayout,
+      colors: safeColors,
+      content: safeContent
+    };
+
+    console.log('Generated layout:', JSON.stringify(safeLayout, null, 2));
+    console.log('Generated colors:', JSON.stringify(safeColors, null, 2));
+
+    const html = generateHTML(companyName, safeData, logoBase64);
+    const react = generateReact(companyName, safeData, logoBase64);
 
     return new Response(
       JSON.stringify({
         html,
         react,
-        content: parsed.content,
-        colors: parsed.colors,
-        layout: parsed.layout,
+        content: safeContent,
+        colors: safeColors,
+        layout: safeLayout,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
