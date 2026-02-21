@@ -1,0 +1,72 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @db.Text
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  landingPages LandingPage[]
+  
+  @@map("companies")
+}
+
+model LandingPage {
+  id          String   @id @default(uuid())
+  companyId   String
+  version     Int      @default(1)
+  layout      Json
+  colors      Json
+  content     Json
+  htmlCode    String   @db.Text
+  reactCode   String   @db.Text
+  publicUrl   String?  @unique
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sections PageSection[]
+  
+  @@map("landing_pages")
+  @@index([companyId])
+  @@index([publicUrl])
+}
+
+model PageSection {
+  id            String   @id @default(uuid())
+  landingPageId String
+  sectionType   String
+  content       Json
+  order         Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  
+  @@map("page_sections")
+  @@index([landingPageId])
+}
+
+model DownloadLead {
+  id             String   @id @default(uuid())
+  name           String
+  email          String
+  contactNumber  String
+  businessName   String
+  location       String
+  downloadFormat String
+  createdAt      DateTime @default(now())
+  
+  @@map("download_leads")
+  @@index([email])
+}

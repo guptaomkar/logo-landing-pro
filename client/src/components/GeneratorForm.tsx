@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
 
 interface GeneratorFormProps {
   onGenerate: (data: any) => void;
@@ -20,6 +20,10 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
   const [companyDescription, setCompanyDescription] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const { toast } = useToast();
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,7 +37,7 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
         });
         return;
       }
-      
+
       setLogoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -71,6 +75,33 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
       return;
     }
 
+    if (!companyEmail.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter your company email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!companyPhone.trim()) {
+      toast({
+        title: "Phone required",
+        description: "Please enter your company phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!companyAddress.trim()) {
+      toast({
+        title: "Address required",
+        description: "Please enter your company address",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
@@ -82,19 +113,19 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
         reader.readAsDataURL(logoFile);
       });
 
-      // Call the edge function to generate the landing page
-      const { data, error } = await supabase.functions.invoke("generate-landing-page", {
-        body: {
-          companyName,
-          companyDescription,
-          logoBase64,
-        },
+      // Call the new backend API
+      const data = await api.landingPages.generate({
+        companyName,
+        companyDescription,
+        logoBase64,
+        companyEmail,
+        companyPhone,
+        companyAddress,
+        theme,
       });
 
-      if (error) throw error;
-
       onGenerate(data);
-      
+
       toast({
         title: "Success!",
         description: "Your landing page has been generated",
@@ -103,7 +134,7 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
       console.error("Generation error:", error);
       toast({
         title: "Generation failed",
-        description: "Failed to generate landing page. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate landing page. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -195,6 +226,82 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
             </div>
           </div>
 
+          {/* Company Email Input */}
+          <div className="space-y-2">
+            <Label htmlFor="company-email" className="text-base font-medium">
+              Company Email
+            </Label>
+            <Input
+              id="company-email"
+              type="email"
+              placeholder="contact@yourcompany.com"
+              value={companyEmail}
+              onChange={(e) => setCompanyEmail(e.target.value)}
+              className="bg-background/50 border-border/50"
+            />
+          </div>
+
+          {/* Company Phone Input */}
+          <div className="space-y-2">
+            <Label htmlFor="company-phone" className="text-base font-medium">
+              Company Phone
+            </Label>
+            <Input
+              id="company-phone"
+              type="tel"
+              placeholder="+1 (555) 123-4567"
+              value={companyPhone}
+              onChange={(e) => setCompanyPhone(e.target.value)}
+              className="bg-background/50 border-border/50"
+            />
+          </div>
+
+          {/* Company Address Input */}
+          <div className="space-y-2">
+            <Label htmlFor="company-address" className="text-base font-medium">
+              Company Address
+            </Label>
+            <Input
+              id="company-address"
+              placeholder="123 Main St, City, State, ZIP"
+              value={companyAddress}
+              onChange={(e) => setCompanyAddress(e.target.value)}
+              className="bg-background/50 border-border/50"
+            />
+          </div>
+
+          {/* Theme Selection */}
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Theme</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="theme"
+                  value="light"
+                  checked={theme === 'light'}
+                  onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+                  className="w-4 h-4 text-primary"
+                />
+                <span className="text-sm font-medium">Light</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="theme"
+                  value="dark"
+                  checked={theme === 'dark'}
+                  onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+                  className="w-4 h-4 text-primary"
+                />
+                <span className="text-sm font-medium">Dark</span>
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Choose between light or dark theme for your landing page
+            </p>
+          </div>
+
           {/* Generate Button */}
           <Button
             onClick={handleGenerate}
@@ -215,7 +322,7 @@ const GeneratorForm = ({ onGenerate, isGenerating, setIsGenerating }: GeneratorF
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Our AI will analyze your logo, extract colors, and generate professional 
+            Our AI will analyze your logo, extract colors, and generate professional
             content including headlines, features, testimonials, and more.
           </p>
         </div>

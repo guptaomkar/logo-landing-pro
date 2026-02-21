@@ -12,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
 import { z } from "zod";
 
 interface DownloadModalProps {
@@ -73,16 +73,15 @@ const DownloadModal = ({
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("download_leads").insert({
+      // Save lead to database via API
+      await api.downloadLeads.create({
         name: formData.name.trim(),
         email: formData.email.trim(),
-        contact_number: formData.contactNumber.trim(),
-        business_name: formData.businessName.trim(),
+        contactNumber: formData.contactNumber.trim(),
+        businessName: formData.businessName.trim(),
         location: formData.location.trim(),
-        download_format: downloadFormat,
+        downloadFormat,
       });
-
-      if (error) throw error;
 
       // Proceed with download
       const content =
@@ -115,7 +114,7 @@ const DownloadModal = ({
       console.error("Error saving lead:", error);
       toast({
         title: "Error",
-        description: "Failed to process your request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to process your request. Please try again.",
         variant: "destructive",
       });
     } finally {

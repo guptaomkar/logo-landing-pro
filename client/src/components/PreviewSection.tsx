@@ -21,7 +21,7 @@ const PreviewSection = ({ generatedPage, isGenerating }: PreviewSectionProps) =>
 
   const handleOpenInNewTab = () => {
     if (!generatedPage?.html) return;
-    
+
     const newWindow = window.open();
     if (newWindow) {
       newWindow.document.write(generatedPage.html);
@@ -106,7 +106,7 @@ const PreviewSection = ({ generatedPage, isGenerating }: PreviewSectionProps) =>
                     srcDoc={generatedPage.html}
                     className="w-full h-[500px]"
                     title="Landing Page Preview"
-                    sandbox="allow-same-origin"
+                    sandbox="allow-same-origin allow-scripts"
                   />
                 </div>
               </motion.div>
