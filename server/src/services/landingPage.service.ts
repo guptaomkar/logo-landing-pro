@@ -133,7 +133,7 @@ export class LandingPageService {
         });
 
         // Update landing page content
-        const updatedContent = { ...landingPage.content, [(sectionType as any)]: (generatedData.content as any)[sectionType] };
+        const updatedContent = { ...(landingPage.content as Record<string, unknown>), [sectionType]: (generatedData.content as any)[sectionType] };
 
         await prisma.landingPage.update({
             where: { id: landingPageId },
