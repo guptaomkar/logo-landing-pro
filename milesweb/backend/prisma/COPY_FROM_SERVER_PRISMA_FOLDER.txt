@@ -1,0 +1,3 @@
+// Copy this entire prisma/ folder into your milesweb/backend/ directory.
+// The schema.prisma file defines the database structure.
+// Run: npx prisma migrate deploy   (on the server after setting DATABASE_URL)
